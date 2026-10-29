@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import hashlib
 import inspect
@@ -37,6 +37,7 @@ from agent import SYSTEM, run_turn
 from monitor import latest_code, render_markdown
 from model_router import AUTO_MODEL_OPTION, auto_enabled, choose_model
 from tools import WorkspaceTools
+from prompts import PROMPT_PRESETS, build_custom_prompt, build_gemini_prompt_request
 workspace_root = Path(cfg["workspace_dir"]).resolve()
 projects_dir = BASE_DIR / "projects"
 projects_dir.mkdir(parents=True, exist_ok=True)
@@ -1195,6 +1196,52 @@ with gr.Blocks(title="Local Agent") as demo:
             placeholder=r"app.py, report.docx, source.pdf hoặc D:\duong-dan\file.py",
         )
         gr.Markdown("Project mới có thư mục và plan.md riêng. File Word/PDF đã chọn có thể đọc làm đầu vào; agent tự lưu kết quả vào project trên ổ D. Ứng dụng chỉ khởi chạy khi bạn nhấn Play.")
+
+        with gr.Accordion("💡 Mẫu câu lệnh gợi ý & Trợ lý Prompt (Prompt Library & Gemini Helper)", open=False):
+            gr.Markdown("Chọn mẫu prompt có sẵn, hoặc dùng Form điền nhanh / Trợ lý Gemini để sinh câu lệnh chuẩn cho Agent.")
+            with gr.Tabs():
+                with gr.TabItem("⭐ Mẫu câu lệnh có sẵn"):
+                    preset_dropdown = gr.Dropdown(
+                        choices=[(data["title"], key) for key, data in PROMPT_PRESETS.items()],
+                        value="math_calculator",
+                        label="Chọn loại dự án mong muốn",
+                    )
+                    preset_preview = gr.Textbox(
+                        value=PROMPT_PRESETS["math_calculator"]["prompt"],
+                        lines=7,
+                        label="Nội dung prompt gợi ý",
+                        interactive=True,
+                    )
+                    use_preset_button = gr.Button("👉 Nạp câu lệnh này vào ô Chat", variant="secondary")
+
+                with gr.TabItem("📝 Form tạo Prompt nhanh"):
+                    with gr.Row():
+                        f_name = gr.Textbox(label="Tên dự án", placeholder="vi-du: natural-math-calc", value="my-smart-app")
+                        f_ui = gr.Dropdown(
+                            label="Khung giao diện",
+                            choices=["Tkinter Desktop Canvas", "CustomTkinter", "Web HTML5 / Canvas", "Pygame 2D", "Không cần UI (Script dòng lệnh)"],
+                            value="Tkinter Desktop Canvas",
+                        )
+                    with gr.Row():
+                        f_icon = gr.Textbox(label="Ý tưởng Icon", placeholder="vi-du: Máy tính xanh navy, phi thuyền neon, viên thuốc", value="Icon chuẩn Windows 32x32 pixel theo chủ đề")
+                        f_goal = gr.Textbox(label="Mục tiêu chính", placeholder="vi-du: Nhập phân số và căn thức trực quan, vẽ đồ thị...", value="Nhập phân số và căn thức trực quan, vẽ đồ thị hàm số")
+                    f_special = gr.Textbox(
+                        label="Đặc tả bổ sung / Ràng buộc",
+                        placeholder="vi-du: Không bắt người dùng gõ code, hỗ trợ phím tắt, 60 FPS...",
+                        value="Người dùng thao tác tự nhiên qua nút bấm, không phải gõ code",
+                    )
+                    build_prompt_button = gr.Button("⚡ Tạo Prompt hoàn chỉnh & Đưa vào ô Chat", variant="primary")
+
+                with gr.TabItem("🤖 Trợ lý hỏi Gemini / Copilot"):
+                    gr.Markdown("Gõ ý tưởng ngắn gọn của bạn $\\rightarrow$ Bấm nút để lấy câu lệnh chuẩn $\\rightarrow$ Dán vào Gemini $\\rightarrow$ Lấy kết quả Gemini trả lời dán lại vào ô Chat.")
+                    gemini_idea = gr.Textbox(
+                        label="Ý tưởng ngắn gọn của bạn",
+                        placeholder="vi-du: Làm game rắn săn mồi 3D hoặc app tra cứu thuốc có ảnh 2D",
+                        value="Làm app máy tính để bàn nhập phân số và căn thức trực quan, vẽ đồ thị",
+                    )
+                    make_gemini_button = gr.Button("📋 Tạo câu lệnh hỏi Gemini / Copilot")
+                    gemini_result = gr.Textbox(label="Câu lệnh gửi Gemini (Bấm nút trên để tạo)", lines=6, interactive=True)
+
         box = gr.Textbox(placeholder="Nhập tin nhắn rồi Enter...", label="Bạn")
         play_button = gr.Button("▶ Play / Chạy thử", variant="primary")
         run_output = gr.Textbox(label="Kết quả chạy thử (được gửi vào lịch sử chat)", lines=8, interactive=False)
@@ -1225,6 +1272,32 @@ with gr.Blocks(title="Local Agent") as demo:
     new_plan_button.click(_new_plan, inputs=project_radio, outputs=[plan_editor, plan_status])
     approve_plan_button.click(_approve_plan, inputs=[project_radio, plan_editor], outputs=[plan_editor, plan_status])
     copilot_prompt_button.click(_make_copilot_prompt, inputs=[project_radio, chat_radio], outputs=copilot_prompt)
+    preset_dropdown.change(
+        lambda key: PROMPT_PRESETS.get(key, {}).get("prompt", ""),
+        inputs=preset_dropdown,
+        outputs=preset_preview,
+    )
+    use_preset_button.click(
+        lambda content: content,
+        inputs=preset_preview,
+        outputs=box,
+    )
+    build_prompt_button.click(
+        lambda name, ui, icon, goal, spec: build_custom_prompt(
+            project_name=name,
+            goal=goal,
+            ui_type=ui,
+            icon_theme=icon,
+            special_requirements=spec,
+        ),
+        inputs=[f_name, f_ui, f_icon, f_goal, f_special],
+        outputs=box,
+    )
+    make_gemini_button.click(
+        lambda idea: build_gemini_prompt_request(idea),
+        inputs=gemini_idea,
+        outputs=gemini_result,
+    )
     terminal_timer.tick(_refresh_server_log, inputs=project_radio, outputs=terminal_panel)
     monitor_timer.tick(_refresh_monitor, inputs=project_radio, outputs=[monitor_panel, code_panel])
     monitor_toggle.change(lambda on: gr.Timer(active=bool(on)), inputs=monitor_toggle, outputs=monitor_timer)

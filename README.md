@@ -6,7 +6,7 @@
 [![Platform Windows 11](https://img.shields.io/badge/platform-Windows%2011-0078D6.svg)](https://microsoft.com)
 [![Engine Ollama](https://img.shields.io/badge/engine-Ollama-black.svg)](https://ollama.ai)
 [![License MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests 100% Passing](https://img.shields.io/badge/tests-166%20passed-brightgreen.svg)](run_tests.py)
+[![Tests 100% Passing](https://img.shields.io/badge/tests-172%20passed-brightgreen.svg)](run_tests.py)
 
 ---
 
@@ -36,7 +36,12 @@
      - `plan.md`: Verified roadmap and acceptance criteria.
    - **Autonomous Loop:** Generates dynamic task checklists, compiles syntax checks (`py_compile`), executes unit tests, detects tracebacks, and self-repairs code autonomously.
 
-4. **100% On-Premise Privacy**:
+4. **Built-in Prompt Library & Gemini Specification Helper (`prompts.py`, `PROMPT_GUIDE.md`)**:
+   - **Ready-to-Use Presets:** One-click presets for Natural Math Expression input (stacked fractions, square root radicals with vinculum), 2D/3D arcade games (60 FPS Canvas, AABB collision), generic drug research dossiers, and multi-resolution Windows icons.
+   - **Quick Prompt Generator:** Structured form to generate crystal-clear specifications with project name, UI framework, icon theme, and unit test criteria.
+   - **Ask Gemini Helper:** Generates optimized meta-prompts to query Gemini/Copilot and paste back production-grade specifications into the agent.
+
+5. **100% On-Premise Privacy**:
    - Confidential patent research, formulation data, and proprietary code never leave your local environment (`D:\AI-Data\local-agent`).
 
 ---
@@ -75,7 +80,7 @@ generic-pharma-agent/
 │   ├── __init__.py
 │   └── workspace_tools.py
 │
-├── tests/                # 166 automated unit test cases (100% Pass)
+├── tests/                # 172 automated unit test cases (100% Pass)
 │   ├── __init__.py
 │   ├── test_agent.py
 │   ├── test_agents_module.py
@@ -85,6 +90,7 @@ generic-pharma-agent/
 │   ├── test_model_router.py
 │   ├── test_monitor.py
 │   ├── test_project_launcher.py
+│   ├── test_prompts.py
 │   ├── test_research.py
 │   └── test_tools.py
 │
@@ -96,11 +102,14 @@ generic-pharma-agent/
 │
 ├── launcher.bat          # 1-click Windows 11 launcher
 ├── main.py               # Production startup entry point
+├── prompts.py            # Prompt presets & Gemini prompt builder
+├── PROMPT_GUIDE.md       # Comprehensive prompt handbook & glossary
 ├── config.py             # Unified settings (.env + config.yaml)
 ├── config.yaml           # YAML configuration defaults
 ├── models.yaml           # Intelligent model routing matrix
 ├── requirements.txt      # Clean, locked dependencies
 ├── run_tests.py          # Test discoverer & runner
+├── run_tests.bat         # 1-click test runner
 ├── create_shortcut.py    # Desktop shortcut creator (Python)
 ├── create_shortcut.ps1   # Desktop shortcut creator (PowerShell)
 └── push_to_github.bat    # GitHub synchronization utility
@@ -140,13 +149,13 @@ The Web UI opens automatically in your browser at: `http://127.0.0.1:7860`.
 
 ## 🧪 Verification & Unit Tests
 
-Run the full automated test suite (166 test cases covering all modules):
+Run the full automated test suite (172 test cases covering all modules):
 ```shell
 python run_tests.py
 ```
 Expected output:
 ```text
-Ran 166 tests in 0.5s
+Ran 172 tests in 0.9s
 OK
 ```
 

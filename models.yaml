@@ -1,0 +1,21 @@
+# Danh mục model theo loại việc, viết cho máy i3 + 16GB RAM chạy bằng CPU.
+# Sửa tên model cho khớp với `ollama list` trên máy bạn. App tự bỏ qua model chưa cài.
+
+auto:
+  enabled: true          # false = không hiện lựa chọn "Tự chọn theo việc" trong dropdown
+  ram_headroom_gb: 4     # luôn chừa RAM cho Windows, trình duyệt, Ollama
+  gb_per_billion: 0.6    # ước lượng RAM cho mỗi tỷ tham số (bản Q4); chỉ là ước lượng
+
+profiles:
+  light:                 # hỏi đáp, đọc file, tra cứu web, báo cáo, việc ngắn
+    prefer: ["qwen3.5:4b", "qwen2.5-coder:7b"]
+  code:                  # viết/sửa code, test, debug, nhiều bước
+    prefer: ["qwen3.5:9b", "qwen3.5:4b", "qwen2.5-coder:7b"]
+
+# Nhận diện loại việc bằng từ khóa (không phân biệt hoa thường).
+code_keywords: ["code", "viết chương trình", "viết hàm", "sửa lỗi", "lỗi", "bug", "debug", "test",
+                "app", "ứng dụng", "chức năng", "tính năng", "refactor", "html", "python", "script",
+                "implement", "fix", "build"]
+
+# Gặp các cụm này thì tăng cấp lên profile "code" dù yêu cầu ngắn.
+escalate_keywords: ["tiếp tục sửa lỗi", "vẫn lỗi", "chưa chạy được", "chưa đạt", "làm lại"]

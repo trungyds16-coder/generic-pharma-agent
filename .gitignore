@@ -1,0 +1,46 @@
+# Virtual environment
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# User projects & active workspace dynamic files
+projects/*
+!projects/.gitkeep
+workspace/.agent/
+workspace/*.bat
+workspace/*.ico
+workspace/*.json
+
+# Data runtime & caches (keep data/references/)
+data/cache/
+data/chats/
+data/pip-cache/
+data/backups/
+data/usage.json
+
+# Logs
+logs/*.log
+
+# Environment secrets
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# PyInstaller
+*.spec

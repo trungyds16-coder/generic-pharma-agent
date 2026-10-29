@@ -1,0 +1,25 @@
+ollama_host: http://127.0.0.1:11434
+ollama_models_dir: D:\OllamaModels
+model: qwen2.5-coder:7b
+workspace_dir: D:\AI-Data\local-agent\workspace
+data_dir: D:\AI-Data\local-agent\data
+max_tool_rounds: 12
+python_timeout_sec: 180
+num_ctx: 8192
+auto_run: true
+require_plan: false
+claude_timeout_sec: 900
+default_docx_template: 'D:\AI-Data\local-agent\data\references\TEMPLATE_TONG_QUAN.docx'
+default_html_template: 'D:\AI-Data\local-agent\data\references\bao-cao-khung.html'
+default_patent_template: 'D:\AI-Data\local-agent\data\references\mau-tra-cuu-patent-empagliflozin.html'
+default_research_assistant: 'D:\AI-Data\local-agent\data\references\tro-ly-ai-duoc-pham-hoan-chinh-v5-4.html'
+default_priority_sources:
+  - https://pubchem.ncbi.nlm.nih.gov/
+  - https://www.ebi.ac.uk/chembl/
+  - https://dailymed.nlm.nih.gov/
+  - https://www.accessdata.fda.gov/
+  - https://www.ema.europa.eu/
+  - https://patents.google.com/
+  - https://patentscope.wipo.int/
+
+model_keep_alive: 5m

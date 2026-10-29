@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THÔNG TIN SỞ HỮU TRÍ TUỆ CỦA BOEHRINGER INGELHEIM ĐỐI VỚI CHẾ PHẨM JARDIANCE (EMPAGLIFLOZIN 10MG VÀ 25MG)</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            margin: 20px; 
+            line-height: 1.6; 
+            color: #2c3e50; 
+            background-color: #f4f6f9; 
+        }
+        .container { 
+            max-width: 1150px; 
+            margin: 0 auto; 
+            background: #fff; 
+            padding: 35px; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08); 
+        }
+        h1 { 
+            color: #1a365d; 
+            text-align: center; 
+            font-size: 22px; 
+            border-bottom: 3px solid #2b6cb0; 
+            padding-bottom: 12px; 
+            margin-bottom: 25px;
+            text-transform: uppercase;
+        }
+        h2 { 
+            color: #2b6cb0; 
+            border-bottom: 2px solid #e2e8f0; 
+            padding-bottom: 6px; 
+            margin-top: 35px; 
+            font-size: 18px; 
+        }
+        h3 { 
+            color: #2d3748; 
+            margin-top: 20px; 
+            font-size: 15px; 
+        }
+        p { margin-bottom: 12px; text-align: justify; }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 15px; 
+            table-layout: fixed;
+        }
+        th, td { 
+            border: 1px solid #cbd5e0; 
+            padding: 12px; 
+            text-align: left; 
+            vertical-align: top; 
+            font-size: 13.5px; 
+            word-wrap: break-word;
+        }
+        th { 
+            background-color: #ebf8ff; 
+            color: #2c5282; 
+            font-weight: bold; 
+        }
+        tr:nth-child(even) { background-color: #f7fafc; }
+        .patent-name { 
+            white-space: pre-line; 
+            font-weight: bold; 
+            color: #c53030; 
+        }
+        ul { padding-left: 20px; margin-bottom: 15px; }
+        ol { padding-left: 20px; margin-bottom: 15px; }
+        li { margin-bottom: 8px; text-align: justify; }
+        .conclusion-box { 
+            background-color: #f0fff4; 
+            border-left: 5px solid #38a169; 
+            padding: 12px 18px; 
+            margin-bottom: 15px; 
+            border-radius: 4px; 
+        }
+        .note-box {
+            background-color: #fffaf0;
+            border-left: 4px solid #dd6b20;
+            padding: 10px 15px;
+            font-style: italic;
+            color: #7b341e;
+            font-size: 13px;
+        }
+        .ref-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 15px 20px;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        .ref-box a { color: #2b6cb0; text-decoration: none; }
+        .ref-box a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 id="doc-title">BÁO CÁO TỔNG QUAN SỞ HỮU TRÍ TUỆ</h1>
+
+    <h2>I. TỔNG QUAN SẢN PHẨM</h2>
+    <div id="overview"></div>
+    
+    <h3>Số đăng ký lưu hành tại Việt Nam</h3>
+    <ul id="vn-registrations"></ul>
+    <div id="vn-notes" class="note-box"></div>
+
+    <h2>II. BẢNG CÁC PATENT BẢO HỘ LIÊN QUAN</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 22%;">Nhóm Patent</th>
+                <th style="width: 23%;">Patent / Nơi bảo hộ</th>
+                <th style="width: 33%;">Nội dung bảo hộ</th>
+                <th style="width: 22%;">Hạn dùng / Tình trạng</th>
+            </tr>
+        </thead>
+        <tbody id="patent-table-body"></tbody>
+    </table>
+
+    <h2>III. NHẬN XÉT VÀ KẾT LUẬN</h2>
+    <p id="analysis-intro" style="font-weight: 500;"></p>
+    <ul id="analysis-bullets"></ul>
+
+    <h3>KẾT LUẬN RỦI RO PHÁP LÝ</h3>
+    <div id="conclusions"></div>
+
+    <h2>IV. TÀI LIỆU THAM KHẢO</h2>
+    <div class="ref-box">
+        <ol id="references-list"></ol>
+    </div>
+</div>
+
+<script>
+    // Dữ liệu JSON về Exforge (Valsartan / Amlodipine Besylate) của Novartis
+    const data = {
+  "title": "THÔNG TIN SỞ HỮU TRÍ TUỆ CỦA BOEHRINGER INGELHEIM ĐỐI VỚI CHẾ PHẨM JARDIANCE (EMPAGLIFLOZIN 10MG VÀ 25MG)",
+  "product_name": "Jardiance",
+  "overview_paragraphs": [
+    "Chế phẩm Jardiance do Boehringer Ingelheim (Đức) nghiên cứu phát minh và hợp tác phát triển thương mại hóa cùng Eli Lilly. Hoạt chất empagliflozin thuộc nhóm ức chế kênh đồng vận chuyển natri-glucose 2 (SGLT2 inhibitors), được chỉ định trong điều trị đái tháo đường typ 2, suy tim mạn tính và bệnh thận mạn.",
+    "Nhà sản xuất/Cơ sở cấp phép: Boehringer Ingelheim Pharma GmbH & Co. KG (Đức) theo các hồ sơ đăng ký lưu hành quốc tế và tại Việt Nam.",
+    "Phê duyệt lần đầu: Được Cơ quan Quản lý Dược phẩm Châu Âu (EMA) phê duyệt lưu hành vào tháng 05/2014. Tại Mỹ, US FDA cấp phép ngày 01/08/2014 (NDA 204629) cho cả hai mức hàm lượng viên nén 10mg và 25mg.",
+    "Tại Việt Nam, ghi nhận các số đăng ký lưu hành sau:"
+  ],
+  "vietnam_registrations": [
+    "VN-19762-16: Jardiance 10mg (Empagliflozin 10mg) [cần xác minh]",
+    "VN-19763-16: Jardiance 25mg (Empagliflozin 25mg) [cần xác minh]",
+    "Chưa xác định – cần tra cứu đối chiếu số đăng ký gia hạn hiệu lực mới nhất trên Cổng thông tin Cục Quản lý Dược [cần xác minh]"
+  ],
+  "vietnam_notes": "Jardiance thuộc Danh mục thuốc Biệt dược gốc do Bộ Y tế ban hành và được lựa chọn làm Thuốc đối chiếu (Reference Product) cho nghiên cứu tương đương sinh học (BE) theo Thông tư 07/2022/TT-BYT. Tại Việt Nam, các đơn sáng chế gốc và công thức của Boehringer Ingelheim nộp qua hệ thống PCT cần được tra cứu trạng thái hiệu lực thực tế tại Cục Sở hữu trí tuệ trước khi ra mắt generic.",
+  "patent_groups": [
+    {
+      "group_label": "Patent bảo hộ cho API - Empagliflozin (hợp chất gốc)",
+      "rows": [
+        {
+          "patents": "US7579449 - Mỹ\nEP1824855 - Châu Âu [cần xác minh]",
+          "content": "Dẫn xuất glucopyranosyl-substituted benzene (hoạt chất empagliflozin) - sáng chế phân tử cơ bản của Boehringer Ingelheim",
+          "expiry": "Mỹ: 05/11/2025 (đã được gia hạn PTE; quyền độc quyền nhi khoa cộng thêm 6 tháng đến 05/05/2026); Châu Âu: Đã hoặc chuẩn bị hết hạn theo hiệu lực SPC (~2024-2025) [cần xác minh]"
+        }
+      ]
+    },
+    {
+      "group_label": "Patent bảo hộ dạng thù hình / Dạng kết tinh (Polymorph/Crystal form)",
+      "rows": [
+        {
+          "patents": "US7713938 - Mỹ\nEP2004658 - Châu Âu [cần xác minh]",
+          "content": "Dạng tinh thể (crystalline form) của empagliflozin và quy trình tổng hợp dạng kết tinh",
+          "expiry": "Mỹ: 15/04/2027; Châu Âu: Khoảng tháng 04/2027 [cần xác minh]"
+        }
+      ]
+    },
+    {
+      "group_label": "Patent bảo hộ dạng bào chế và thành phần công thức (Formulation)",
+      "rows": [
+        {
+          "patents": "US8802852 - Mỹ [cần xác minh]",
+          "content": "Thành phần công thức dược phẩm viên nén chứa empagliflozin và hệ tá dược ổn định",
+          "expiry": "07/04/2029 (đã liệt kê trong FDA Orange Book) [cần xác minh]"
+        }
+      ]
+    },
+    {
+      "group_label": "Patent bảo hộ chỉ định điều trị và kết hợp lâm sàng (Method of Use)",
+      "rows": [
+        {
+          "patents": "US9949998 - Mỹ\nUS10258637 - Mỹ [cần xác minh]",
+          "content": "Phương pháp sử dụng empagliflozin nhằm giảm tỷ lệ tử vong do tim mạch và biến cố tim mạch ở bệnh nhân đái tháo đường typ 2",
+          "expiry": "Khoảng tháng 05/2034 [cần xác minh]"
+        },
+        {
+          "patents": "US10596185 - Mỹ [cần xác minh]",
+          "content": "Phương pháp điều trị suy tim và giảm nguy cơ nhập viện do suy tim",
+          "expiry": "Khoảng năm 2034 - 2035 [cần xác minh]"
+        }
+      ]
+    }
+  ],
+  "analysis_intro": "Qua kết quả tra cứu hệ thống Orange Book của US FDA và cơ sở dữ liệu sáng chế quốc tế liên quan đến chế phẩm Jardiance (empagliflozin), rút ra các nhận định sau:",
+  "analysis_bullets": [
+    "Hàng rào bảo hộ phân tử hoạt chất gốc (US7579449) sẽ hết hiệu lực bảo hộ tại Mỹ vào tháng 11/2025 (hoặc tháng 05/2026 tính cả thời gian độc quyền nhi khoa), mở đường cho các sản phẩm generic chuẩn bị thương mại hóa.",
+    "Boehringer Ingelheim đã thiết lập chiến lược bằng sáng chế kế tiếp (evergreening/secondary patents) bảo vệ dạng thù hình kết tinh (hết hạn 2027) và công thức bào chế viên nén (hết hạn 2029).",
+    "Các bằng sáng chế phương pháp điều trị tim mạch và suy tim (hết hạn 2034) có thể ngăn chặn việc đăng ký đầy đủ nhãn chỉ định (skinny labeling có thể được áp dụng để lách chỉ định này khi nộp generic).",
+    "Nhiều nhà sản xuất generic quốc tế đã nộp hồ sơ ANDA kèm Paragraph IV; Boehringer Ingelheim đã đạt được các thỏa thuận bảo mật cho phép một số công ty generic ra mắt thuốc vào khoảng cuối năm 2025 hoặc 2026."
+  ],
+  "conclusions": [
+    {
+      "label": "LƯU Ý QUAN TRỌNG",
+      "text": "Báo cáo này do AI soạn tự động ngày 2026-10-19 từ kiến thức sẵn có, KHÔNG tra cứu cơ sở dữ liệu patent. Số patent, ngày hết hạn, số đăng ký lưu hành có thể sai hoặc thiếu; mọi nội dung phải được đối chiếu với nguồn chính thức trước khi sử dụng."
+    },
+    {
+      "label": "Thời điểm gia nhập thị trường",
+      "text": "Bằng sáng chế hợp chất cốt lõi của Jardiance vẫn còn hiệu lực đến cuối năm 2025/đầu 2026 tại các thị trường lớn. Do đó, việc thương mại hóa tự do thuốc generic chứa empagliflozin chưa thể diễn ra ngay trước mốc thời gian này."
+    },
+    {
+      "label": "Chiến lược né tránh vi phạm (Design-around)",
+      "text": "Các nhà sản xuất thuốc generic cần phát triển công thức viên nén không trùng lặp tỷ lệ tá dược theo US8802852 và xem xét dạng nguyên liệu thù hình không xâm phạm US7713938 nhằm giảm thiểu rủi ro tranh chấp sáng chế phụ."
+    },
+    {
+      "label": "Thẩm định tự do hoạt động (FTO) tại Việt Nam",
+      "text": "Doanh nghiệp generic tại Việt Nam cần tiến hành tra cứu FTO chuyên sâu tại Cục Sở hữu trí tuệ đối với các đơn sáng chế quốc gia tương ứng của Boehringer Ingelheim để xác định chính xác ngày hết hạn hoặc khả năng bị từ chối cấp bằng trước khi nộp hồ sơ đăng ký lưu hành."
+    }
+  ],
+  "references": [
+    {
+      "title": "Tra cứu đối chiếu: Google Patents (từ khóa hoạt chất)",
+      "link": "https://patents.google.com/?q=empagliflozin%20%2B%20empagliflozin"
+    },
+    {
+      "title": "Tra cứu đối chiếu: Espacenet (EPO)",
+      "link": "https://worldwide.espacenet.com/patent/search?q=empagliflozin%20%2B%20empagliflozin"
+    },
+    {
+      "title": "Tra cứu đối chiếu: WIPO PATENTSCOPE",
+      "link": "https://patentscope.wipo.int/"
+    },
+    {
+      "title": "Tra cứu đối chiếu: FDA Orange Book (patent và độc quyền tại Mỹ)",
+      "link": "https://www.accessdata.fda.gov/scripts/cder/ob/"
+    },
+    {
+      "title": "Tra cứu đối chiếu: DrugBank",
+      "link": "https://go.drugbank.com/unearth/q?searcher=drugs&query=empagliflozin%20%2B%20empagliflozin"
+    },
+    {
+      "title": "Tra cứu đối chiếu: Cục Sở hữu trí tuệ Việt Nam",
+      "link": "https://ipvietnam.gov.vn/"
+    },
+    {
+      "title": "Tra cứu đối chiếu: Cục Quản lý Dược (số đăng ký lưu hành)",
+      "link": "https://dav.gov.vn/"
+    }
+  ]
+};
+
+    // Hàm tự động điền dữ liệu ra trang web
+    window.onload = function() {
+        document.getElementById('doc-title').innerText = data.title;
+        
+        const overviewDiv = document.getElementById('overview');
+        data.overview_paragraphs.forEach(p => { overviewDiv.innerHTML += `<p>${p}</p>`; });
+
+        const vnRegList = document.getElementById('vn-registrations');
+        data.vietnam_registrations.forEach(item => { vnRegList.innerHTML += `<li><b>${item}</b></li>`; });
+
+        document.getElementById('vn-notes').innerText = "Ghi chú: " + data.vietnam_notes;
+
+        const tableBody = document.getElementById('patent-table-body');
+        data.patent_groups.forEach(group => {
+            group.rows.forEach(row => {
+                tableBody.innerHTML += `
+                    <tr>
+                        <td><b>${group.group_label}</b></td>
+                        <td class="patent-name">${row.patents}</td>
+                        <td>${row.content}</td>
+                        <td>${row.expiry}</td>
+                    </tr>
+                `;
+            });
+        });
+
+        document.getElementById('analysis-intro').innerText = data.analysis_intro;
+        
+        const bulletsList = document.getElementById('analysis-bullets');
+        data.analysis_bullets.forEach(b => { bulletsList.innerHTML += `<li>${b}</li>`; });
+
+        const conclusionsDiv = document.getElementById('conclusions');
+        data.conclusions.forEach(c => {
+            conclusionsDiv.innerHTML += `
+                <div class="conclusion-box">
+                    <b>${c.label}:</b> ${c.text}
+                </div>
+            `;
+        });
+
+        const refList = document.getElementById('references-list');
+        data.references.forEach(ref => {
+            refList.innerHTML += `
+                <li>${ref.title} [<a href="${ref.link}" target="_blank">Liên kết</a>]</li>
+            `;
+        });
+    };
+</script>
+
+</body>
+</html>

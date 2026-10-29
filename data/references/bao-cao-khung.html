@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Khung báo cáo Tổng quan tài liệu</title>
+<style>
+:root{--bg:#f1f5f9;--fg:#172033;--bd:#d7deea;--ac:#2457c5}
+@media (prefers-color-scheme:dark){:root{--bg:#0f172a;--fg:#e5e7eb;--bd:#334155}}
+html,body{height:100%;margin:0}
+body{display:flex;flex-direction:column;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,Segoe UI,Arial,sans-serif}
+.bar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--bd)}
+.bar button,.bar label.btn{background:var(--ac);color:#fff;border:0;border-radius:6px;padding:7px 12px;cursor:pointer;font:inherit}
+.bar button.sec{background:transparent;color:var(--fg);border:1px solid var(--bd)}
+select{padding:6px;border-radius:6px;border:1px solid var(--bd);background:transparent;color:inherit;max-width:320px}
+iframe{flex:1;border:0;width:100%;background:#fff}
+.hint{opacity:.75}
+</style></head><body>
+<div class="bar">
+  <b>Khung báo cáo</b>
+  <label class="btn">📂 Mở file JSON từ công cụ<input id="f" type="file" accept=".json,application/json" hidden></label>
+  <button id="demo" class="sec" type="button">Xem dữ liệu mẫu</button>
+  <select id="sel" hidden></select>
+  <span id="st" class="hint">Mở file .json (tải từ công cụ tạo tài liệu) để xem báo cáo. Trong báo cáo có nút In/Lưu PDF, chỉnh sửa và thêm ảnh.</span>
+</div>
+<iframe id="v" title="Báo cáo" sandbox="allow-scripts allow-modals allow-downloads"></iframe>
+<script>
+/* ===== RPT: dựng báo cáo HTML từ 1 hàng dữ liệu "Tổng quan tài liệu" ===== */
+const RPT = (() => {
+  const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const rich = v => {
+    let t = String(v == null ? '' : v);
+    t = t.replace(/&(?!(?:amp|lt|gt|quot|#\d+);)/g, '&amp;');
+    t = t.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    t = t.replace(/<(?!\/?(?:b|i|u|sub|sup)>|br\s*\/?>|img src="data:image\/png;base64,[A-Za-z0-9+\/=]+">)/g, '&lt;');
+    return t.replace(/\r?\n/g, '<br>');
+  };
+  const plain = v => String(v == null ? '' : v).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const subF = t => (/<sub>/.test(t) ? String(t) : String(t).replace(/([A-Z][a-z]?|\))(\d+)/g, '$1<sub>$2</sub>'));
+  const mark = h => h.replace(/(\[[^\[\]<]{0,70}(?:cần|chưa|nhập|bổ sung|xác minh|thực nghiệm|số |ngày |tên |Tên |Tá dược|…)[^\[\]<]{0,70}\])/g, '<mark class="mk">$1</mark>').replace(/(Chưa tra được[^<;]*|Chưa xác định[^<;]*)/g, '<mark class="mk">$1</mark>');
+  const ck = v => (/☑|true|✔|✓|\[x\]/i.test(String(v)) ? '☑' : '☐');
+
+  /* ---- bảng dạng | cột | cột | với <br> giữa các hàng ---- */
+  function parseBlocks(v) {
+    const parts = String(v || '').split(/<br\s*\/?>|\r?\n/i), lines = [];
+    let cur = null;
+    for (const p of parts) {
+      const x = p.trim(); if (!x) continue;
+      if (cur !== null) { cur += '<br>' + x; if (/\|$/.test(x)) { lines.push({ r: cur }); cur = null; } continue; }
+      if (x.startsWith('|')) { if (x.length > 1 && /\|$/.test(x)) lines.push({ r: x }); else cur = x; }
+      else lines.push({ t: x });
+    }
+    if (cur !== null) lines.push({ r: cur + ' |' });
+    const blocks = []; let tb = null;
+    for (const l of lines) {
+      if (l.t !== undefined) { tb = null; blocks.push({ title: l.t }); continue; }
+      const cells = l.r.replace(/^\|/, '').replace(/\|\s*$/, '').split('|').map(c => c.trim());
+      if (cells.every(c => /^:?-{2,}:?$/.test(c))) continue;
+      if (!tb) { tb = { rows: [] }; blocks.push(tb); }
+      tb.rows.push(cells);
+    }
+    return blocks;
+  }
+  function blocksHtml(v) {
+    if (!plain(v)) return '<div class="f"><span class="ph">[chưa có nội dung – nhập tay]</span></div>';
+    return '<div class="f">' + parseBlocks(v).map(b => {
+      if (b.title !== undefined) return '<p class="bt">' + mark(rich(b.title)) + '</p>';
+      const n = Math.max(...b.rows.map(r => r.length));
+      const cell = (t, tag) => '<' + tag + '>' + mark(rich(t)) + '</' + tag + '>';
+      const rows = b.rows.map((r, i) => '<tr>' + Array.from({ length: n }, (_, j) => cell(r[j] || '', i === 0 ? 'th' : 'td')).join('') + '</tr>');
+      return '<table class="data"><thead>' + rows[0] + '</thead><tbody>' + rows.slice(1).join('') + '</tbody></table>';
+    }).join('') + '</div>';
+  }
+  function parseRefs(v) {
+    let t = String(v || '').replace(/<br\s*\/?>/gi, '\n');
+    const note = (t.match(/LƯU Ý:[\s\S]*$/) || [''])[0]; if (note) t = t.slice(0, t.length - note.length);
+    const hits = []; let exp = 1, m; const re = /(?:^|[\n;]\s*|\s)(\d{1,2})\.\s+(?=\S)/g;
+    while ((m = re.exec(t))) if (+m[1] === exp) { hits.push({ s: m.index, e: m.index + m[0].length }); exp++; }
+    const items = hits.map((h, i) => t.slice(h.e, i + 1 < hits.length ? hits[i + 1].s : t.length).replace(/[;\s]+$/, '').trim()).filter(Boolean);
+    return { items, note: note.trim(), raw: t.trim() };
+  }
+  const link = h => h.replace(/(https?:\/\/[^\s<)]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+
+  /* ---- Tạp chất liên quan: gộp mọi hoạt chất vào MỘT bảng (Hoạt chất | Tạp chất | Giới hạn) ---- */
+  function impRows(v) {
+    const txt = String(v || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!txt) return null;
+    const re = /(?:^|[.;]\s+)(?:Tạp chất liên quan(?: của)?\s+)?([A-ZÀ-Ỵ][\p{L}\d\-() ]{1,45}?):\s+/gu, marks = []; let m;
+    while ((m = re.exec(txt))) { const nm = m[1].trim(); if (/^(Tạp|Tổng|Impurit|Total)/i.test(nm)) continue; marks.push({ name: nm, hs: m.index, e: m.index + m[0].length }); }
+    const secs = marks.length ? marks.map((k, i) => ({ name: k.name, c: txt.slice(k.e, i + 1 < marks.length ? marks[i + 1].hs : txt.length) })) : [{ name: '', c: txt }];
+    const rows = [];
+    for (const sc of secs) {
+      for (let x of sc.c.split(/\s*[,;]\s*(?=\s*(?:Tạp|Tổng|Impurit|Total|Mỗi|Bất kỳ|Any |Unspecified|Không định danh))/i)) {
+        x = x.trim().replace(/[.;,\s]+$/, ''); if (!x) continue;
+        const mm = x.match(/^(.*?)\s*(≤|<=|≦|<|không quá|NMT)\s*(.+)$/i);
+        if (mm && mm[1]) rows.push([sc.name, mm[1].trim(), (/^(≤|<=|≦)$/.test(mm[2]) ? '≤' : /^</.test(mm[2]) ? '<' : 'Không quá') + ' ' + mm[3].trim()]);
+        else rows.push([sc.name, x, '']);
+      }
+    }
+    return rows.length >= 2 ? rows : null;
+  }
+  function impHtml(v) {
+    const rows = impRows(v); if (!rows) return null;
+    const by = []; rows.forEach(r => { const g = by[by.length - 1]; if (g && g.n === r[0]) g.items.push(r); else by.push({ n: r[0], items: [r] }); });
+    const hasName = rows.some(r => r[0]), cell = t => mark(rich(t)); let body = '';
+    by.forEach(g => g.items.forEach((r, i) => { body += '<tr>' + (hasName && i === 0 ? `<td rowspan="${g.items.length}">${cell(g.n)}</td>` : '') + `<td>${cell(r[1])}</td><td>${cell(r[2])}</td></tr>`; }));
+    return '<table class="imp"><thead><tr>' + (hasName ? '<th>Hoạt chất</th>' : '') + '<th>Tạp chất</th><th>Giới hạn</th></tr></thead><tbody>' + body + '</tbody></table>';
+  }
+  /* ---- Danh mục thuốc PHẢI thử tương đương sinh học (BE): chỉ khi thuộc danh mục mới tích TT 07 và "thử BE" ---- */
+  const BE_STEMS = ['amlodipin', 'azithromycin', 'carbamazepin', 'cefixim', 'cefuroxim', 'clarithromycin', 'glibenclamid', 'gliclazid', 'metformin', 'metoprolol', 'nifedipin', 'rifampicin', 'amoxicil', 'carvedilol', 'cefpodoxim', 'ezetimib', 'irbesartan', 'itraconazol', 'risperidon', 'rosuvastatin', 'simvastatin', 'sulpirid', 'sultamicillin', 'telmisartan', 'valproat', 'valproic', 'fenofibrat'];
+  const noAcc = s => String(s || '').toLowerCase().replace(/đ/g, 'd').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  function be(r) {
+    const t = noAcc([r.HEADER_HOAT_CHAT, r.DANH_SACH_HOAT_CHAT].join(' '));
+    return BE_STEMS.some(k => t.includes(k));
+  }
+  /* ---- Mục 5: tạp chất và mọi phép thử khác nằm TRONG cùng MỘT bảng liền mạch ---- */
+  function mergeStd(v) {
+    const s = String(v || ''); if (!/(^|<br\s*\/?>|\n)\s*\|/i.test(s)) return s;
+    const parts = s.split(/<br\s*\/?>|\r?\n/i); let inRow = false, last = -1, stt = 0, ncol = 0;
+    parts.forEach((p, i) => {
+      const x = p.trim(); if (!x) return;
+      if (inRow) { if (/\|$/.test(x)) { inRow = false; last = i; } return; }
+      if (x.startsWith('|')) {
+        if (!ncol) ncol = x.replace(/^\|/, '').replace(/\|\s*$/, '').split('|').length;
+        const m = x.match(/^\|\s*(\d+)\s*\|/); if (m) stt = Math.max(stt, +m[1]);
+        if (x.length > 1 && /\|$/.test(x)) last = i; else inRow = true;
+      }
+    });
+    if (last < 0 || inRow) return s;
+    const tail = parts.slice(last + 1).map(x => x.trim()).filter(Boolean);
+    if (!tail.length || tail.some(x => x.startsWith('|'))) return s;
+    const items = [];
+    for (let x of tail) {
+      if (/^<b>[^<]*<\/b>\s*:?$/i.test(x)) continue; /* dòng tiêu đề rời: bỏ */
+      x = x.replace(/^(<b>)?\s*[-•–]\s+/i, '$1');
+      let m = x.match(/^<b>\s*(.+?)\s*:?\s*<\/b>\s*:?\s*(.*)$/i);
+      if (!m) m = x.match(/^([^:<|]{3,60}):\s*(.+)$/);
+      if (m) items.push({ name: m[1].trim(), c: (m[2] || '').trim() });
+      else if (items.length) items[items.length - 1].c += '<br>' + x;
+      else items.push({ name: 'Tạp chất liên quan', c: x });
+    }
+    if (!items.length) return parts.slice(0, last + 1).join('<br>');
+    const cl = t => String(t).replace(/\|/g, '/').trim();
+    const rows = items.map((it, i) => {
+      const cells = ncol >= 3 ? [String(stt + 1 + i), '**' + cl(it.name) + '**', cl(it.c)].concat(Array(ncol - 3).fill('')) : ncol === 2 ? ['**' + cl(it.name) + '**', cl(it.c)] : [cl(it.name + ': ' + it.c)];
+      return '| ' + cells.join(' | ') + ' |';
+    });
+    return parts.slice(0, last + 1).concat(rows).join('<br>');
+  }
+
+  /* ---- checklist nhẹ (dùng khi không được truyền từ công cụ) ---- */
+  const LABELS = { TEN_INN: 'Tên INN', TEN_IUPAC: 'Tên IUPAC', HINH_CAU_TRUC: 'Hình cấu trúc', SO_CAS: 'Số CAS', CONG_THUC_PHAN_TU: 'Công thức phân tử', KHOI_LUONG_PHAN_TU: 'Khối lượng phân tử', TAP_CHAT_LIEN_QUAN: 'Tạp chất', CAM_QUAN_DUOC_CHAT: 'Cảm quan', THU_HINH_DUOC_CHAT: 'Dạng thù hình', DO_TAN_DUOC_CHAT: 'Độ tan', HUT_AM_DUOC_CHAT: 'Hút ẩm', DIEM_CHAY_DUOC_CHAT: 'Điểm chảy', PKA_DUOC_CHAT: 'pKa', BCS_DUOC_CHAT: 'BCS', KHOI_TIEU_CHUAN_NGUYEN_LIEU: 'Tiêu chuẩn nguyên liệu', CHI_DINH: 'Chỉ định', LIEU_DUNG: 'Liều dùng', CACH_DUNG: 'Cách dùng', CO_CHE_TAC_DUNG: 'Cơ chế tác dụng', CHUYEN_HOA: 'Chuyển hóa', THAI_TRU: 'Thải trừ', THUOC_THAM_CHIEU_TEN: 'Tên thuốc tham chiếu', NHA_SAN_XUAT_GOC: 'Nhà SX thuốc tham chiếu', TA_DUOC_THAM_CHIEU: 'Tá dược thuốc tham chiếu', HINH_DANG_VIEN_GOC: 'Hình dạng viên', QUY_CACH_DONG_GOI: 'Quy cách đóng gói', HAN_DUNG: 'Hạn dùng', BAO_QUAN: 'Bảo quản', THUOC_LUU_HANH_VN: 'Thuốc lưu hành VN', VN_TEN_TM: 'SP VN: tên thương mại', THONG_TIN_PHAP_LY_BANG: 'Thông tin pháp lý', CONG_THUC_DE_XUAT_CHI_TIET: 'Công thức đề xuất', TIEU_CHUAN_THANH_PHAM_CHI_TIET: 'Tiêu chuẩn thành phẩm', DANH_SACH_TAI_LIEU_THAM_KHAO: 'Tài liệu tham khảo' };
+  const MANUAL = new Set(['THONG_TIN_PHAP_LY_BANG', 'TDS_NHA_SX', 'TDS_NHA_PP']);
+  const NEEDS = /cần (bổ sung|tra cứu|thực nghiệm)|chưa tra (được|cứu)|chưa xác định|chưa có (tài liệu|thông tin)/i;
+  function lite(r) {
+    const out = [];
+    for (const [k, label] of Object.entries(LABELS)) {
+      const raw = String(r[k] || ''), v = plain(raw); let st, note = '';
+      if (k === 'HINH_CAU_TRUC') { const n = (raw.match(/<img /g) || []).length; st = n ? 'ok' : 'miss'; if (!n) note = 'chưa có hình'; }
+      else if (!v || /^[\[\]\s…\-–—]*$/.test(v)) st = MANUAL.has(k) ? 'hand' : 'miss';
+      else if (NEEDS.test(v)) { st = v.length < 220 ? (MANUAL.has(k) ? 'hand' : 'miss') : 'ai'; if (st === 'ai') note = 'một phần chưa tra được'; }
+      else if (k === 'DIEM_CHAY_DUOC_CHAT' && /PubChem CID/.test(v) && !/cần (xác minh|bổ sung)/i.test(v)) st = 'ok';
+      else st = 'ai';
+      out.push({ k, label, st, note });
+    }
+    out.push({ k: 'VN_HINH_ANH', label: 'Hình sản phẩm VN', st: 'hand', note: 'bấm vào ô ảnh trong bảng để thêm' });
+    return out;
+  }
+  const ICON = { ok: '✅', ai: '⚠️', miss: '❌', hand: '✍️' };
+  const TIP = { ok: 'có nguồn đã kiểm', ai: 'AI/web, cần đối chiếu', miss: 'không tìm được', hand: 'cần nhập tay' };
+
+  /* ---- phần chạy trong tài liệu báo cáo (được nhúng bằng toString) ---- */
+  function runtime() {
+    var $ = function (s) { return document.querySelector(s); };
+    function setEdit(on) {
+      document.body.classList.toggle('edit', on);
+      document.querySelectorAll('.f').forEach(function (e) { if (on) e.setAttribute('contenteditable', 'true'); else e.removeAttribute('contenteditable'); });
+    }
+    $('#t-edit').onchange = function () { setEdit(this.checked); };
+    $('#t-badge').onchange = function () { document.body.classList.toggle('showbd', this.checked); };
+    $('#b-print').onclick = function () { window.print(); };
+    $('#b-save').onclick = function () {
+      var c = document.documentElement.cloneNode(true);
+      c.querySelector('body').classList.remove('edit', 'showbd');
+      c.querySelectorAll('[contenteditable]').forEach(function (e) { e.removeAttribute('contenteditable'); });
+      c.querySelectorAll('input[type=checkbox]').forEach(function (e) { e.removeAttribute('checked'); });
+      var t = (document.title || 'bao-cao').replace(/[^\w\-]+/g, '_').slice(0, 60);
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob(['<!DOCTYPE html>\n' + c.outerHTML], { type: 'text/html' }));
+      a.download = t + '.html'; a.click();
+    };
+    var fi = document.createElement('input'); fi.type = 'file'; fi.accept = 'image/*'; var target = null;
+    function addImg(cell, file) {
+      var url = URL.createObjectURL(file), im = new Image();
+      im.onload = function () {
+        var k = Math.min(1, 320 / im.width, 320 / im.height), cv = document.createElement('canvas');
+        cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k);
+        var g = cv.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(im, 0, 0, cv.width, cv.height);
+        var h = cell.querySelector('.hint'); if (h) h.remove();
+        var i2 = new Image(); i2.src = cv.toDataURL('image/png'); cell.appendChild(i2);
+      };
+      im.src = url;
+    }
+    fi.onchange = function () { if (target && fi.files[0]) addImg(target, fi.files[0]); fi.value = ''; };
+    document.addEventListener('click', function (e) {
+      var t = e.target;
+      if (t.classList && t.classList.contains('hint')) { target = t.closest('.imgcell'); fi.click(); }
+      else if (t.tagName === 'IMG' && t.closest('.imgcell') && document.body.classList.contains('edit') && confirm('Xóa ảnh này?')) t.remove();
+    });
+    document.addEventListener('paste', function (e) {
+      var n = window.getSelection().anchorNode, el = n && (n.nodeType === 1 ? n : n.parentNode), cell = el && el.closest && el.closest('.imgcell');
+      var items = (e.clipboardData && e.clipboardData.items) || [];
+      if (!cell) return;
+      for (var i = 0; i < items.length; i++) if (items[i].type.indexOf('image/') === 0) { e.preventDefault(); addImg(cell, items[i].getAsFile()); return; }
+    });
+  }
+
+  const CSS = `
+:root{color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:#e5e7eb;color:#111;font:13pt/1.45 "Times New Roman",Times,serif}
+.toolbar{position:sticky;top:0;z-index:5;background:#0f172a;color:#fff;padding:8px 12px;font:13px/1.4 system-ui,Segoe UI,Arial,sans-serif;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.toolbar button{background:#2457c5;color:#fff;border:0;border-radius:6px;padding:6px 12px;font:inherit;cursor:pointer}
+.toolbar label{display:flex;gap:4px;align-items:center;cursor:pointer}
+.sum{margin-left:auto;opacity:.9}
+.page{max-width:210mm;margin:14px auto;background:#fff;padding:16mm 18mm;box-shadow:0 6px 24px rgba(0,0,0,.15)}
+.hd{display:flex;justify-content:space-between;border-bottom:1.5px solid #111;padding-bottom:4px;margin-bottom:12px;font-size:11pt}
+h1{font-size:16pt;text-align:center;margin:6px 0 14px;text-transform:uppercase}
+h2{font-size:13.5pt;text-transform:uppercase;margin:20px 0 6px;border-bottom:1px solid #999;padding-bottom:2px}
+h3{font-size:13pt;margin:14px 0 4px}
+p{margin:4px 0}
+.bt{font-weight:700;margin:8px 0 3px}
+table{border-collapse:collapse;width:100%;margin:6px 0 10px}
+th,td{border:1px solid #111;padding:4px 7px;vertical-align:top;font-size:12pt;word-break:break-word}
+.kv th{width:30%;text-align:left;font-weight:600;background:#f3f4f6}
+.data th{background:#e5e7eb;text-align:center}
+.data td:first-child{white-space:normal}
+.vn th{background:#e5e7eb;text-align:center}
+.mk{background:#fff3b0;color:#7a4b00;padding:0 2px;border-radius:2px}
+.ph{color:#b91c1c;font-style:italic}
+.imgcell{min-height:60px;text-align:center}
+.imgcell img{max-width:240px;max-height:240px;display:block;margin:4px auto}
+.hint{color:#64748b;font:italic 10pt system-ui,Arial,sans-serif;cursor:pointer}
+.bd{display:none;font:11px system-ui,Arial,sans-serif;margin-left:4px;vertical-align:middle}
+.showbd .bd{display:inline}
+.chk{font:12px/1.5 system-ui,Arial,sans-serif;border:1px solid #cbd5e1;background:#f8fafc;border-radius:8px;padding:8px 12px;margin-bottom:12px}
+.chk ul{margin:4px 0 0 18px;padding:0}
+.boxes td{border:0;padding:3px 6px;font-size:12.5pt}
+.boxes{margin:2px 0}
+.edit .f{outline:1px dashed #93c5fd;min-height:1.2em}
+.note{font-style:italic;color:#444;font-size:11pt}
+.refs{padding-left:22px;margin:4px 0}
+.refs li{margin:2px 0;font-size:12pt;word-break:break-word}
+.imp{margin:0;width:100%}.kv .imp th{width:auto;text-align:center;background:#e5e7eb}.imp td:first-child{font-weight:600}
+sup,sub{line-height:0}
+@page{size:A4;margin:16mm 14mm}
+@media print{body{background:#fff}.toolbar,.chk,.hint{display:none!important}.page{margin:0;box-shadow:none;padding:0;max-width:none}tr{page-break-inside:avoid}h2,h3{page-break-after:avoid}.showbd .bd{display:none}}
+`;
+
+  function build(row, items) {
+    const r = row || {};
+    const st = {}; (items || lite(r)).forEach(i => { st[i.k] = i; });
+    const bd = k => (st[k] ? `<span class="bd" title="${esc(TIP[st[k].st])}${st[k].note ? ' – ' + esc(st[k].note) : ''}">${ICON[st[k].st]}</span>` : '');
+    const F = (k, fn) => {
+      const raw = r[k]; if (!plain(raw)) return '<div class="f"><span class="ph">[chưa có – nhập tay]</span></div>';
+      let h = rich(fn ? fn(String(raw)) : raw); return '<div class="f">' + mark(h) + '</div>';
+    };
+    const kv = (label, k, fn) => `<tr><th>${esc(label)}${bd(k)}</th><td>${F(k, fn)}</td></tr>`;
+    const sup = t => '<sup>' + t + '</sup>';
+    const names = String(r.HEADER_HOAT_CHAT || r.DANH_SACH_HOAT_CHAT || '').trim();
+    const title = r.TEN_HEADER || r.DANH_SACH_HOAT_CHAT || 'Tổng quan tài liệu';
+    const sCount = { ok: 0, ai: 0, miss: 0, hand: 0 }; Object.values(st).forEach(i => sCount[i.st]++);
+    const todo = Object.values(st).filter(i => i.st === 'miss' || i.st === 'hand');
+    const chk = `<div class="chk"><b>Checklist</b>: ✅ ${sCount.ok} có nguồn đã kiểm · ⚠️ ${sCount.ai} AI/web cần đối chiếu · ❌ ${sCount.miss} không tìm được · ✍️ ${sCount.hand} cần nhập tay` + (todo.length ? `<ul>${todo.map(i => `<li>${ICON[i.st]} <b>${esc(i.label)}</b>${i.note ? ' – ' + esc(i.note) : ''}</li>`).join('')}</ul>` : '') + '<div style="margin-top:4px;color:#64748b">Mục cần xử lý hiển thị chữ đỏ hoặc nền vàng trong báo cáo. Bật “Hiện nhãn nguồn” để xem biểu tượng từng mục.</div></div>';
+
+    // hình cấu trúc
+    const imgHtml = (plain(r.HINH_CAU_TRUC) || /<img /.test(r.HINH_CAU_TRUC || '')) ? rich(r.HINH_CAU_TRUC) : '';
+    const structCell = `<td class="imgcell">${imgHtml}${/<img /.test(imgHtml) ? '' : '<span class="hint">[chưa có hình – bấm để chọn ảnh hoặc dán Ctrl+V]</span>'}</td>`;
+
+    // bảng thuốc VN
+    const VK = ['VN_TEN_TM', 'VN_HOAT_CHAT', 'VN_DONG_GOI', 'VN_NHA_SX', 'VN_CONG_THUC'];
+    const vp = VK.map(k => (String(r[k] || '').trim() ? String(r[k]).split('||').map(x => x.trim()) : ['']));
+    const vn = Math.max(...vp.map(a => a.length));
+    let vrows = '';
+    for (let i = 0; i < vn; i++) vrows += '<tr>' + VK.map((k, j) => `<td><div class="f">${vp[j][i] ? mark(rich(vp[j][i])) : '<span class="ph">[…]</span>'}</div></td>`).join('') + '<td class="imgcell"><span class="hint">[bấm để thêm ảnh / dán Ctrl+V]</span></td></tr>';
+
+    const refs = parseRefs(r.DANH_SACH_TAI_LIEU_THAM_KHAO);
+    const refHtml = !plain(r.DANH_SACH_TAI_LIEU_THAM_KHAO) ? '<div class="f"><span class="ph">[chưa có – nhập tay]</span></div>'
+      : '<div class="f">' + (refs.items.length ? '<ol class="refs">' + refs.items.map(x => '<li>' + link(mark(rich(x))) + '</li>').join('') + '</ol>' : '<p>' + link(mark(rich(refs.raw))) + '</p>') + (refs.note ? '<p class="note">' + mark(rich(refs.note)) + '</p>' : '') + '</div>';
+
+    const rb = be(r) ? '☑' : '☐';
+    const impCell = (() => { const v = r.TAP_CHAT_LIEN_QUAN; if (!plain(v)) return F('TAP_CHAT_LIEN_QUAN'); if (/<br\s*\/?>\s*\|/i.test(v) || /^\s*\|/.test(v)) return blocksHtml(v); const t = impHtml(v); return t ? '<div class="f">' + t + '</div>' : F('TAP_CHAT_LIEN_QUAN'); })();
+    const box = (label, k) => `<td>${ck(k === 'PL_TDS_HOC' ? rb : r[k])} ${label}</td>`;
+    const fk = (r.KHOI_THONG_TIN_LY_HOA || '').trim();
+
+    const body = `
+<div class="toolbar noprint">
+  <button id="b-print" type="button">🖨 In / Lưu PDF</button>
+  <button id="b-save" type="button">⬇ Tải file .html (kèm chỉnh sửa)</button>
+  <label><input type="checkbox" id="t-edit"> Chỉnh sửa nội dung</label>
+  <label><input type="checkbox" id="t-badge"> Hiện nhãn nguồn</label>
+  <span class="sum">✅${sCount.ok} ⚠️${sCount.ai} ❌${sCount.miss} ✍️${sCount.hand}</span>
+</div>
+<div class="page">
+  ${chk}
+  <div class="hd"><span>${esc(names)}</span><span>TỔNG QUAN TÀI LIỆU</span></div>
+  <h1>Tổng quan tài liệu – ${esc(title)}</h1>
+
+  <h2>1. Mục tiêu nghiên cứu</h2>
+  <p>• Khái quát mục tiêu nghiên cứu: Nghiên cứu ${esc(r.DANG_BAO_CHE || '')} ${esc(r.DANH_SACH_HOAT_CHAT || '')}</p>
+  <p>• Sản xuất tại nhà máy: <span class="f"><span class="ph">[nhập tay]</span></span></p>
+
+  <h2>2. Thông tin về dược chất</h2>
+  <h3>2.1 Đặc tính lý hóa của dược chất</h3>
+  <p class="bt">Thông tin chung${sup('1,2')}${fk ? ' <span class="note">' + esc(fk) + '</span>' : ''}</p>
+  <table class="kv"><tbody>
+    ${kv('Tên INN', 'TEN_INN')}${kv('Tên IUPAC', 'TEN_IUPAC')}
+    <tr><th>Cấu trúc hoạt chất sử dụng${bd('HINH_CAU_TRUC')}</th>${structCell}</tr>
+    ${kv('Tên gọi khác', 'TEN_GOI_KHAC')}${kv('No. CAS', 'SO_CAS')}${kv('Công thức phân tử', 'CONG_THUC_PHAN_TU', subF)}${kv('Khối lượng phân tử', 'KHOI_LUONG_PHAN_TU')}<tr><th>Tạp chất${bd('TAP_CHAT_LIEN_QUAN')}</th><td>${impCell}</td></tr>
+  </tbody></table>
+  <p class="bt">Tính chất vật lý</p>
+  <table class="kv"><tbody>
+    ${kv('Cảm quan (tinh thể/bột kết tinh/bột vô định hình, màu sắc, mùi vị)', 'CAM_QUAN_DUOC_CHAT')}${kv('Dạng thù hình (nếu có)', 'THU_HINH_DUOC_CHAT')}${kv('Độ tan trong các dung môi', 'DO_TAN_DUOC_CHAT')}${kv('Tính hút ẩm', 'HUT_AM_DUOC_CHAT')}${kv('Điểm chảy (melting point)', 'DIEM_CHAY_DUOC_CHAT')}${kv('pKa', 'PKA_DUOC_CHAT')}${kv('Phân loại sinh dược học (BCS)', 'BCS_DUOC_CHAT')}
+  </tbody></table>
+
+  <h3>2.2 Tiêu chuẩn chất lượng dược chất ${bd('KHOI_TIEU_CHUAN_NGUYEN_LIEU')}</h3>
+  ${blocksHtml(r.KHOI_TIEU_CHUAN_NGUYEN_LIEU)}
+
+  <h3>2.3 Chỉ định, liều dùng và dược động học</h3>
+  <table class="kv"><tbody>
+    ${kv('Chỉ định', 'CHI_DINH')}${kv('Liều dùng', 'LIEU_DUNG')}${kv('Cách dùng', 'CACH_DUNG')}${kv('Cơ chế tác dụng', 'CO_CHE_TAC_DUNG')}${kv('Chuyển hóa', 'CHUYEN_HOA')}${kv('Thải trừ', 'THAI_TRU')}
+  </tbody></table>
+
+  <h2>3. Thông tin về thuốc tham chiếu</h2>
+  <p class="bt">Thông tin chung${sup('4,5')}</p>
+  <table class="kv"><tbody>
+    ${kv('Tên thương mại của thuốc', 'THUOC_THAM_CHIEU_TEN')}${kv('Dạng bào chế', 'DANG_BAO_CHE')}${kv('Nhà sản xuất', 'NHA_SAN_XUAT_GOC')}
+    <tr><th>Thành phần hoạt chất (ghi theo nhãn của thuốc tham chiếu)</th><td><div class="f">${esc(names)}</div></td></tr>
+    ${kv('Thành phần tá dược', 'TA_DUOC_THAM_CHIEU')}${kv('Hình dạng viên', 'HINH_DANG_VIEN_GOC')}${kv('Quy cách đóng gói', 'QUY_CACH_DONG_GOI')}${kv('Hạn dùng', 'HAN_DUNG')}${kv('Bảo quản', 'BAO_QUAN')}${kv('Đường dùng', 'DUONG_DUNG')}
+  </tbody></table>
+  <p class="bt">Một số thuốc cùng hoạt chất lưu hành trên thị trường ở Việt Nam${sup('4')} ${bd('THUOC_LUU_HANH_VN')}</p>
+  ${F('THUOC_LUU_HANH_VN')}
+  <table class="vn"><thead><tr><th>Tên thương mại</th><th>Thành phần hoạt chất, hàm lượng</th><th>Dạng bào chế, Quy cách đóng gói</th><th>Nhà sản xuất, Nhà phân phối</th><th>Công thức tham khảo</th><th>Hình ảnh sản phẩm</th></tr></thead><tbody>${vrows}</tbody></table>
+
+  <h3>Thông tin pháp lý ${bd('THONG_TIN_PHAP_LY_BANG')}</h3>
+  ${blocksHtml(r.THONG_TIN_PHAP_LY_BANG)}
+  <p class="bt">Phân loại:</p>
+  <table class="boxes"><tbody>
+    <tr>${box('Thuốc kê đơn', 'PL_KE_DON')}${box('Thuốc không kê đơn', 'PL_KHONG_KE_DON')}</tr>
+    <tr>${box('Thuốc kiểm soát đặc biệt', 'PL_KS_DAC_BIET')}${box('Thuốc thử tương đương sinh học', 'PL_TDS_HOC')}</tr>
+    <tr><td></td><td>${ck(rb)} Theo quy định TT 07/2022/TT-BYT</td></tr>
+    <tr><td></td><td>${ck(r.PL_THEO_KH)} Theo yêu cầu của khách hàng</td></tr>
+  </tbody></table>
+  <p class="bt">Nếu có thử tương đương sinh học:${sup('14,15')}</p>
+  <table class="kv"><tbody>
+    ${kv('Tên thương mại của thuốc', 'TDS_TEN_THUOC')}${kv('Dạng bào chế', 'TDS_DANG_BAO_CHE')}${kv('Nhà sản xuất', 'TDS_NHA_SX')}${kv('Nhà phân phối (nếu có)', 'TDS_NHA_PP')}${kv('Thành phần hoạt chất (ghi theo nhãn của thuốc tham chiếu)', 'TDS_HOAT_CHAT')}${kv('Quy cách đóng gói', 'TDS_GOI_GOI')}
+  </tbody></table>
+  <p class="bt">Yêu cầu về dây chuyền sản xuất:</p>
+  <table class="boxes"><tbody>
+    <tr>${box('Cephalosporin', 'DC_CEPHA')}${box('Non-betalactam', 'DC_NON_BETA')}</tr>
+    <tr>${box('Penicillin', 'DC_PENI')}${box('Thuốc dùng ngoài', 'DC_NGOAI')}</tr>
+    <tr>${box('Thuốc trị ung thư, độc tế bào', 'DC_UNG_THU')}${box('Thuốc vô trùng', 'DC_VO_TRUNG')}</tr>
+  </tbody></table>
+  <p>Yêu cầu khác trong sản xuất (nếu có): <span class="f"><span class="ph">[nhập tay]</span></span></p>
+
+  <h2>4. Thông tin về thành phần tá dược công thức đề xuất ${bd('CONG_THUC_DE_XUAT_CHI_TIET')}</h2>
+  <p>Dựa vào đặc điểm hoạt chất và tham khảo công thức trên thị trường, đề xuất công thức như bên dưới:</p>
+  ${blocksHtml(r.CONG_THUC_DE_XUAT_CHI_TIET)}
+
+  <h2>5. Tiêu chuẩn chất lượng thành phẩm${sup('6')} ${bd('TIEU_CHUAN_THANH_PHAM_CHI_TIET')}</h2>
+  ${blocksHtml(mergeStd(r.TIEU_CHUAN_THANH_PHAM_CHI_TIET))}
+
+  <h2>Tài liệu tham khảo ${bd('DANH_SACH_TAI_LIEU_THAM_KHAO')}</h2>
+  ${refHtml}
+</div>`;
+    return '<!DOCTYPE html>\n<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + esc('BaoCao_' + String(title).replace(/\s+/g, '_').slice(0, 60)) + '</title><style>' + CSS + '</style></head><body>' + body + '<script>(' + runtime.toString() + ')();<\/script></body></html>';
+  }
+  return { build, lite, parseBlocks, parseRefs, be, mergeStd };
+})();
+
+const SAMPLE={"TEN_HEADER": "VALSARTAN + AMLODIPINE 160MG/10MG", "DANH_SACH_HOAT_CHAT": "Valsartan + Amlodipine 160mg/10mg", "HEADER_HOAT_CHAT": "Valsartan + Amlodipine", "DANG_BAO_CHE": "Viên nén bao phim phối hợp", "TEN_INN": "Valsartan + Amlodipine besylate", "TEN_IUPAC": "Valsartan: (2S)-3-methyl-2-[pentanoyl[[2'-(1H-tetrazol-5-yl)biphenyl-4-yl]methyl]amino]butanoic acid / Amlodipine besylate: 3-ethyl 5-methyl 2-(2-aminoethoxymethyl)-4-(2-chlorophenyl)-6-methyl-1,4-dihydropyridine-3,5-dicarboxylate;benzenesulfonic acid", "CONG_THUC_PHAN_TU": "C24H29N5O3 (Valsartan) + C20H25ClN2O5 • C6H6O3S (Amlodipine besylate)", "TEN_GOI_KHAC": "Valsartan + Amlodipine Besilate", "SO_CAS": "137862-53-4 (Valsartan) / 111470-99-6 (Amlodipine besylate)", "KHOI_LUONG_PHAN_TU": "435.52 g/mol (Valsartan) + 567.05 g/mol (Amlodipine besylate)", "TAP_CHAT_LIEN_QUAN": "Tạp chất liên quan Valsartan: Tạp chất A ≤ 1.0%, Tạp chất B ≤ 0.2%, Tạp chất C ≤ 0.1%, Tổng tạp không quá 0.3% (không tính tạp A). Tạp chất liên quan Amlodipine: Tạp chất D ≤ 0.3%, Tạp chất A ≤ 0.15%, Tạp chất E ≤ 0.15%, Tạp chất F ≤ 0.15%, Tạp chất không định danh lẻ ≤ 0.1%, Tổng tạp chất ≤ 0.8%.", "CAM_QUAN_DUOC_CHAT": "Valsartan: Bột mịn tinh thể từ trắng đến gần như trắng. Amlodipine besylate: Bột màu trắng hoặc gần như trắng.", "THU_HINH_DUOC_CHAT": "Valsartan: Dạng bột vô định hình hoặc một số dạng đa hình thực tế kết tinh không ổn định. Amlodipine besylate: Tồn tại dạng kết tinh khan ổn định duy nhất.", "DO_TAN_DUOC_CHAT": "Valsartan: Thực tế không tan trong nước, tan nhiều trong ethanol 96% và methanol. Amlodipine besylate: Hơi tan trong nước, tan tự do trong methanol, tan vừa phải trong ethanol (96%), hơi tan trong 2-propanol.", "HUT_AM_DUOC_CHAT": "Valsartan có tính hút ẩm nhẹ ở độ ẩm tương đối lớn. Amlodipine besylate không hút ẩm rõ rệt ở điều kiện thường.", "DIEM_CHAY_DUOC_CHAT": "Valsartan: khoảng 116–117 °C; Amlodipine besylate: khoảng 199–201 °C (theo PubChem/dược điển; cần đối chiếu COA)", "PKA_DUOC_CHAT": "Valsartan: pKa1 = 3.9 (nhóm acid carboxylic), pKa2 = 4.7 (vòng tetrazole). Amlodipine besylate: pKa = 8.6 (tính base yếu của nhóm amine).", "BCS_DUOC_CHAT": "Valsartan: Hệ thống phân loại sinh dược học BCS Lớp II (Độ tan thấp, tính thấm cao) hoặc Lớp IV. Amlodipine besylate: BCS Lớp I (Độ tan cao, tính thấm cao).", "KHOI_TIEU_CHUAN_NGUYEN_LIEU": "<b>1. TIÊU CHUẨN NGUYÊN LIỆU VALSARTAN (USP / COA SỐ: E10250202511001)<\/b><br>| CHỈ TIÊU KIỂM NGHIỆM | TIÊU CHUẨN CHẤP NHẬN |<br>|---|---|<br>| Tính chất (Appearance) | Bột màu trắng hoặc gần như trắng. |<br>| Định tính (Identification) | - Phổ IR phù hợp với Valsartan chuẩn.<br>- Thời gian lưu HPLC đỉnh chính trùng khớp với mẫu chuẩn. |<br>| Hàm lượng nước / Tro sulfat | Nước không quá 2.0%. Tro sulfat không quá 0.1%. |<br>| Kim loại nặng (Heavy metals) | Không quá 0.001% (10 ppm). |<br>| Tạp chất liên quan (HPLC) | Tạp chất A ≤ 1.0%; Tạp chất B ≤ 0.2%; Tạp chất C ≤ 0.1%; Tạp đơn không định danh ≤ 0.1%; Tổng tạp (trừ tạp A) ≤ 0.3%. |<br>| Nitrosamines / Dung môi | NDMA ≤ 0.3 ppm; NDEA ≤ 0.08 ppm. Ethyl acetate ≤ 5000 ppm. |<br>| Định lượng (Assay) | Đạt từ 98.0% đến 102.0% (tính trên chế phẩm khan). |<br><br><b>2. TIÊU CHUẨN NGUYÊN LIỆU AMLODIPINE BESILATE (Ph.Eur / CADILA PHARMA)<\/b><br>| CHỈ TIÊU KIỂM NGHIỆM | TIÊU CHUẨN CHẤP NHẬN |<br>|---|---|<br>| Tính chất & Độ tan | Bột màu trắng hoặc gần như trắng. Hơi tan trong nước, tự do tan trong methanol. |<br>| Định tính / Quay cực | Phổ IR phù hợp mẫu chuẩn. Góc quay cực riêng từ -0.10° đến +0.10°. |<br>| Tạp chất liên quan (HPLC) | Tạp chất D ≤ 0.30%; Tạp chất A ≤ 0.15%; Tạp chất E ≤ 0.15%; Tạp chất F ≤ 0.15%; Tạp đơn lẻ ≤ 0.10%; Tổng tạp chất ≤ 0.80%. |<br>| Nước / Tro sulfat / Dung môi | Nước ≤ 0.50%. Tro sulfat ≤ 0.20%. Isopropyl alcohol ≤ 2000 ppm; Methanol ≤ 2000 ppm; Toluene ≤ 800 ppm. |<br>| Định lượng (Assay) | Đạt từ 97.0% đến 102.0% (tính trên chế phẩm khan). |", "CHI_DINH": "Điều trị tăng huyết áp vô căn ở người trưởng thành. Thuốc phối hợp liều cố định này được chỉ định cho những bệnh nhân có huyết áp không được kiểm soát đầy đủ bằng liệu pháp đơn trị liệu với valsartan hoặc amlodipine riêng lẻ.", "LIEU_DUNG": "Liều khuyến cáo thông thường là 1 viên/ngày. Liều lượng tối đa được khuyến cáo đối với thành phần hoạt chất đơn lẻ là 320 mg Valsartan và 10 mg Amlodipine. Tùy thuộc vào đáp ứng lâm sàng, bệnh nhân có thể được khởi đầu trực tiếp hoặc điều chỉnh từ dạng đơn liều sang viên phối hợp liều 160mg/10mg.", "CACH_DUNG": "Thuốc dùng đường uống trực tiếp bằng một lượng nước vừa đủ. Có thể uống viên nén này cùng hoặc không cùng với thức ăn. Nên uống vào một thời điểm cố định trong ngày (thường vào buổi sáng) để duy trì hiệu quả kiểm soát huyết áp tối ưu.", "CO_CHE_TAC_DUNG": "Cơ chế phối hợp tác động kép: Amlodipine là chất ức chế dòng ion calci (chẹn kênh calci chậm hoặc đối kháng ion calci) thuộc phân nhóm dihydropyridine, gây giãn cơ trơn mạch máu ngoại biên trực tiếp giúp hạ huyết áp. Valsartan là một chất đối kháng thụ thể angiotensin II (ARB) có hoạt tính mạnh và chọn lọc trên thụ thể AT1, giúp ngăn chặn tác dụng co mạch và bài tiết aldosterone ngoại biên của angiotensin II.", "CHUYEN_HOA": "Valsartan ít bị chuyển hóa qua gan, chỉ khoảng 20% liều dùng được tìm thấy dưới dạng chất chuyển hóa (chất chuyển hóa chính là valeryl-4-hydroxy valsartan không có hoạt tính sinh học). Amlodipine được chuyển hóa phần lớn qua gan (khoảng 90%) bởi hệ enzym cytochrom P450 (chủ yếu là CYP3A4) thành các chất chuyển hóa pyridin không còn hoạt tính.", "THAI_TRU": "Valsartan bài tiết chủ yếu qua đường mật vào phân (khoảng 83%) và một lượng nhỏ qua thận vào nước tiểu (khoảng 13%) dưới dạng không biến đổi; thời gian bán thải (T1/2) khoảng 9 giờ. Amlodipine thải trừ chậm qua nước tiểu (khoảng 60% dưới dạng chất chuyển hóa và 10% ở dạng nguyên vẹn); thời gian bán thải pha cuối đạt từ 35-50 giờ.", "THUOC_THAM_CHIEU_TEN": "Exforge 10mg/160mg", "NHA_SAN_XUAT_GOC": "Chưa tra được – cần tra cứu [cần bổ sung]", "TA_DUOC_THAM_CHIEU": "Microcrystalline cellulose, Crospovidone, Colloidal silicon dioxide, Magnesium stearate, Hypromellose, Titanium dioxide, Iron oxide yellow, Macrogol 4000, Talc.", "HINH_DANG_VIEN_GOC": "Viên nén bao phim màu vàng nhạt, hình oval, một mặt khắc 'NVR', mặt kia khắc 'UIC'.", "QUY_CACH_DONG_GOI": "Hộp 2 vỉ x 14 viên", "HAN_DUNG": "36 tháng kể từ ngày sản xuất.", "BAO_QUAN": "Bảo quản ở nhiệt độ dưới 30°C, tránh ẩm và ánh sáng trực tiếp.", "DUONG_DUNG": "Đường uống", "VN_TEN_TM": "[Tên thương mại A] (SĐK: [số đăng ký]) || [Tên thương mại B] (SĐK: [số đăng ký])", "VN_HOAT_CHAT": "Valsartan 160 mg; Amlodipine 10 mg || Valsartan 160 mg; Amlodipine 10 mg", "VN_DONG_GOI": "Viên nén bao phim, hộp 28 viên || Viên nén bao phim, hộp 30 viên", "VN_NHA_SX": "NSX: [công ty A]; NPP: [công ty B] || NSX: [công ty C]", "VN_CONG_THUC": "[Tá dược theo công bố của sản phẩm A] || Chưa tra được – cần tra cứu tại dichvucong.dav.gov.vn", "PL_KE_DON": "☑", "PL_KHONG_KE_DON": "☐", "PL_KS_DAC_BIET": "☐", "PL_TDS_HOC": "☑", "PL_TT07": "☑", "PL_THEO_KH": "☐", "TDS_TEN_THUOC": "Exforge 10mg/160mg", "TDS_DANG_BAO_CHE": "Viên nén bao phim", "TDS_NHA_SX": "Novartis Farma S.p.A", "TDS_NHA_PP": "Công ty TNHH Novartis Việt Nam", "TDS_HOAT_CHAT": "Valsartan 160mg + Amlodipine 10mg", "TDS_GOI_GOI": "Hộp 2 vỉ x 14 viên (28 viên)", "DC_CEPHA": "☐", "DC_NON_BETA": "☑", "DC_PENI": "☐", "DC_NGOAI": "☐", "DC_UNG_THU": "☐", "DC_VO_TRUNG": "☐", "CONG_THUC_DE_XUAT_CHI_TIET": "<b>BẢNG CÔNG THỨC ĐỀ XUẤT CHO VIÊN PHỐI HỢP LIỀU CỐ ĐỊNH (FDC)<\/b><br>| STT | Thành phần nguyên liệu | Hàm lượng (mg/viên) | Tỉ lệ (%) | Vai trò trong công thức |<br>|---|---|---|---|---|<br>| 1 | Valsartan | 160.00 | 44.44% | Hoạt chất chính (Đối kháng thụ thể AT1) |<br>| 2 | Amlodipine besylate | 13.87 | 3.85% | Hoạt chất chính (Tương đương 10mg Amlodipine) |<br>| 3 | Microcrystalline cellulose M102 | 148.13 | 41.15% | Tá dược độn dính, tạo khung viên |<br>| 4 | Crospovidone (Type A) | 26.00 | 7.22% | Tá dược siêu rã (Rã trong và rã ngoài) |<br>| 5 | Colloidal silicon dioxide (Aerosil 200) | 4.00 | 1.11% | Tá dược trơn điều hòa sự chảy |<br>| 6 | Magnesium stearate | 8.00 | 2.22% | Tá dược trơn rập viên |<br>| | **Khối lượng viên nhân dự kiến** | **360.00** | **100.00%** | **Khối lượng viên nhân** |<br>| 7 | Opadry Yellow (HPMC, TiO2, Iron Oxide) | 12.00 | - | Hỗn hợp tá dược bao phim thẩm mỹ bảo vệ |<br>| => | **TỔNG KHỐI LƯỢNG THÀNH PHẨM** | **372.00** | **-** | **Viên nén bao phim phối hợp** |", "TIEU_CHUAN_THANH_PHAM_CHI_TIET": "<b>TIÊU CHUẨN THÀNH PHẨM THEO USP PHƯƠNG PHÁP CHUYÊN LUẬN (OFFICIAL)<\/b><br>| STT | Chỉ tiêu kiểm nghiệm | Tiêu chuẩn chất lượng áp dụng (USP) |<br>|---|---|---|<br>| 1 | **Định tính (Identification)** | - **Định tính A (UV absorption):** Phổ hấp thụ tử ngoại dung dịch mẫu thử Sample A và Sample B phải tương thích cực đại và cực tiểu tại cùng bước sóng với phổ thu được từ dung dịch chuẩn.<br>- **Định tính B (Retention time):** Thời gian lưu các đỉnh chính trên sắc ký đồ mẫu thử phải phù hợp mẫu chuẩn. |<br>| 2 | **Định lượng (Assay - HPLC)** | Sắc ký lỏng (LC), đầu dò UV 237 nm (Định tính A dùng đầu dò DAD dải 200-400 nm). Cột 3.9-mm × 15-cm; 5-µm pha tĩnh L1. Nhiệt độ cột 30°C. Tốc độ dòng 1.0 mL/phút. Thể tích tiêm 10 µL. Pha động vận hành Gradient gồm Dung dịch A (Nước/Triethylamine 1000:10, chỉnh pH 2.8 với acid phosphoric) và Dung dịch B (Methanol/Acetonitrile 700:300).<br>**Yêu cầu hàm lượng:** Hàm lượng Amlodipine và Valsartan đạt từ **90.0% đến 110.0%** so với hàm lượng nhãn. |<br>| 3 | **Độ hòa tan (Dissolution <711>)** | - **Môi trường:** Đệm phosphat pH 6.8 thể tích 1000 mL. Thiết bị 2 (Cánh khuấy) tốc độ **75 vòng/phút** (Test 1). Thời gian thử là 30 phút.<br>- **Hệ thống phân tích:** LC, detector UV 230 nm, cột 4.6-mm × 15-cm; 4-µm pha tĩnh L11. Tốc độ dòng 1.2 mL/phút, nhiệt độ 40°C.<br>**Yêu cầu giới hạn:** Lượng hoạt chất hòa tan trong 30 phút không dưới **80% (Q)** lượng ghi trên nhãn cho cả hai hoạt chất. |<br>| 4 | **Độ đồng đều liều (<905>)** | Đạt yêu cầu thử nghiệm độ đồng đều đơn vị phân liều theo quy định chuyên luận USP chung. |<br><br><b>[MÔ TẢ PHẦN TẠP CHẤT HỮU CƠ ĐỂ TRÁNH TRÀN BẢNG]:<\/b><br><b>- Organic Impurities (HPLC):<\/b> Tiến hành sắc ký theo điều kiện của phép thử Định lượng. Giới hạn tiêu chuẩn quy định: Tạp chất Devaleryl valsartan (RRT 0.24) ≤ 0.2%; Tạp chất Amlodipine related compound A (RRT 0.50) ≤ 0.5%; Các tạp chất phân hủy của Valsartan gồm Tạp 1 (RRT 0.54), Tạp 2 (RRT 0.81), Tạp 3 (RRT 1.44), và Tạp 4 (RRT 2.06) ≤ 0.2%; Tạp chất Valsartan ethyl ester (RRT 2.32) ≤ 0.2%; Các tạp chất không định danh lẻ khác ≤ 0.2%; Tổng các tạp chất phân hủy không quá 1.2% (hoặc không quá 2.0% nếu tính cả tạp chất vòng phân hủy tiềm tàng). Bỏ qua không tính các đỉnh có diện tích dưới 0.1% và đỉnh benzenesulfonic acid tại RRT 0.19.<br><b>- Giới hạn tạp chất Valsartan Related Compound A:<\/b> Sử dụng hệ pha động n-Hexane/2-propanol/trifluoroacetic acid (850:150:1). Đầu dò UV 230 nm, cột 4.6-mm × 25-cm pha tĩnh L40 hạt 5-µm. Tốc độ dòng 0.8 mL/phút, thể tích tiêm 20 µL. Giới hạn tiêu chuẩn chấp nhận không quá 1.0%.", "DANH_SACH_TAI_LIEU_THAM_KHAO": "1. The United States Pharmacopeia Convention. Official Monographs: \"Amlodipine and Valsartan Tablets\", USP-NF 2025. \n2. European Directorate for the Quality of Medicines & HealthCare (EDQM). European Pharmacopoeia (Ph. Eur.) Monograph: \"Amlodipine Besilate\" & \"Valsartan\".\n3. Cổng thông tin Cục Quản lý Dược Việt Nam (DAV) - Giấy phép lưu hành và dữ liệu Biệt dược gốc Exforge - Novartis.\n4. Phiếu kiểm nghiệm nguyên liệu (Certificate of Analysis) đầu vào từ Nhà sản xuất Cadila Pharmaceuticals Limited (Amlodipine Besilate Batch: 26AD001) và nhà sản xuất quốc tế (Valsartan Batch: 10250-250604).\n5. TCVN - Bộ Y tế Việt Nam. Dược điển Việt Nam V. Nhà xuất bản Y học, 2017.", "HINH_CAU_TRUC": "", "KHOI_THONG_TIN_LY_HOA": "", "THUOC_LUU_HANH_VN": "", "THONG_TIN_PHAP_LY_BANG": ""};
+let ROWS=[];
+const $=i=>document.getElementById(i);
+function show(i){const r=ROWS[i];$('v').srcdoc=RPT.build(r);$('st').textContent=ROWS.length>1?`Hàng ${i+1}/${ROWS.length}`:'';}
+function load(rows,label){
+  ROWS=rows;const sel=$('sel');
+  sel.hidden=rows.length<2;sel.innerHTML=rows.map((r,i)=>`<option value="${i}">${i+1}. ${String(r.DANH_SACH_HOAT_CHAT||'(không tên)').replace(/</g,'&lt;')}</option>`).join('');
+  show(0);$('st').textContent=label||'';
+}
+$('sel').onchange=()=>show(+$('sel').value);
+$('demo').onclick=()=>load([SAMPLE],'Đang xem dữ liệu mẫu (Valsartan + Amlodipine).');
+$('f').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{
+    const j=JSON.parse(await f.text());
+    const rows=Array.isArray(j)?j:Array.isArray(j.rows)?j.rows:[j];
+    if(!rows.length||typeof rows[0]!=='object')throw Error('Không có hàng dữ liệu');
+    load(rows,f.name);
+  }catch(err){$('st').textContent='Không đọc được file: '+err.message}
+  e.target.value='';
+};
+</script></body></html>

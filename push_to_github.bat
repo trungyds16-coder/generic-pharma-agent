@@ -29,16 +29,19 @@ echo [2/4] Kiem tra va gom file...
 "%GIT%" commit -m "feat: GenericPharma-Agent - Local AI Agent for Generic Drug Research and Coding Automation"
 
 echo.
+set "DEFAULT_REPO_URL=https://github.com/trungyds16-coder/generic-pharma-agent.git"
 echo ============================================================
-echo Hay nhap URL repository GitHub cua ban:
-echo Vi du: https://github.com/ten-tai-khoan/generic-pharma-agent.git
+echo Repository GitHub mac dinh:
+echo   %DEFAULT_REPO_URL%
+echo.
+echo Nhan [Enter] de tiep tuc, hoac dan URL khac neu can:
 echo ============================================================
-set /p REPO_URL="URL GitHub: "
+set /p USER_INPUT="URL GitHub [%DEFAULT_REPO_URL%]: "
 
-if "%REPO_URL%"=="" (
-    echo [ERROR] Ban chua nhap URL repository.
-    pause
-    exit /b 1
+if "%USER_INPUT%"=="" (
+    set "REPO_URL=%DEFAULT_REPO_URL%"
+) else (
+    set "REPO_URL=%USER_INPUT%"
 )
 
 echo.

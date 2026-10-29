@@ -7,7 +7,7 @@ Tạo ứng dụng máy tính desktop bằng Python, chạy trên Windows, gồm
 - Phép tính cơ bản: cộng, trừ, nhân, chia, lũy thừa.
 - Hàm lượng giác: sin, cos, tan; sử dụng radian và ghi rõ trong giao diện.
 - Nhập hàm số theo biến x, tính tích phân xác định và vẽ đồ thị.
-- Tô vùng giữa đồ thị và trục x trong khoảng tích phân. Phần f(x) ≥ 0 tô xanh; phần f(x) < 0 tô cam. Chỉ tô trong hai cận đã nhập.
+- TÔ MÀU vùng giữa đồ thị và trục x trong khoảng tích phân. Phần f(x) ≥ 0 tô xanh; phần f(x) < 0 tô cam. Chỉ tô trong hai cận đã nhập.
 - Nhận ký hiệu Unicode thông dụng: ½, ⅓, ¼, ¾, ⅔, √2, √x và √(biểu thức).
 - Dùng Python chuẩn và Tkinter Canvas; không phụ thuộc scipy, numpy hoặc matplotlib.
 

@@ -1,21 +1,27 @@
 # Danh mục model theo loại việc, viết cho máy i3 + 16GB RAM chạy bằng CPU.
-# Sửa tên model cho khớp với `ollama list` trên máy bạn. App tự bỏ qua model chưa cài.
+# Tự động tối ưu hoá phân luồng cho Qwen2.5-Coder và Llama 3.2 (hỗ trợ tool-calling xuất sắc).
 
 auto:
   enabled: true          # false = không hiện lựa chọn "Tự chọn theo việc" trong dropdown
   ram_headroom_gb: 4     # luôn chừa RAM cho Windows, trình duyệt, Ollama
-  gb_per_billion: 0.6    # ước lượng RAM cho mỗi tỷ tham số (bản Q4); chỉ là ước lượng
+  gb_per_billion: 0.6    # ước lượng RAM cho mỗi tỷ tham số (bản Q4)
 
 profiles:
-  light:                 # hỏi đáp, đọc file, tra cứu web, báo cáo, việc ngắn
-    prefer: ["qwen3.5:4b", "qwen2.5-coder:7b"]
-  code:                  # viết/sửa code, test, debug, nhiều bước
-    prefer: ["qwen3.5:9b", "qwen3.5:4b", "qwen2.5-coder:7b"]
+  light:                 # hỏi đáp, giải thích, việc ngắn
+    prefer: ["llama3.2:3b", "qwen3.5:4b", "qwen2.5-coder:7b"]
+  code:                  # viết/sửa code, unit test, debug nhiều bước
+    prefer: ["qwen2.5-coder:7b", "llama3.2:3b", "qwen3.5:4b"]
+  tool_calling:          # ưu tiên gọi công cụ: tra cứu web, PubChem, đọc file, xuất báo cáo
+    prefer: ["llama3.2:3b", "qwen2.5-coder:7b", "qwen3.5:4b"]
 
 # Nhận diện loại việc bằng từ khóa (không phân biệt hoa thường).
 code_keywords: ["code", "viết chương trình", "viết hàm", "sửa lỗi", "lỗi", "bug", "debug", "test",
                 "app", "ứng dụng", "chức năng", "tính năng", "refactor", "html", "python", "script",
                 "implement", "fix", "build"]
+
+tool_keywords: ["tool", "công cụ", "gọi hàm", "tra cứu", "search", "web", "tải", "phân tử",
+                "pubchem", "tài liệu", "docx", "word", "pdf", "báo cáo", "patent", "sáng chế",
+                "hoạt chất", "cas", "thuốc"]
 
 # Gặp các cụm này thì tăng cấp lên profile "code" dù yêu cầu ngắn.
 escalate_keywords: ["tiếp tục sửa lỗi", "vẫn lỗi", "chưa chạy được", "chưa đạt", "làm lại"]

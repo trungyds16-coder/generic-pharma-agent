@@ -60,6 +60,10 @@ class TestClassify(unittest.TestCase):
         profile, why = classify("viết code python", cfg=load_config())
         self.assertEqual(profile, "code")
 
+    def test_tool_keyword(self):
+        profile, why = classify("tra cứu tài liệu dược phẩm", cfg=load_config())
+        self.assertEqual(profile, "tool_calling")
+
     def test_light_fallback(self):
         profile, why = classify("xin chào", cfg=load_config())
         self.assertEqual(profile, "light")

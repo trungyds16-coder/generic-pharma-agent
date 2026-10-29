@@ -15,6 +15,7 @@ _DEFAULT = {
         "code": {"prefer": ["qwen3.5:9b", "qwen3.5:4b", "qwen2.5-coder:7b"]},
     },
     "code_keywords": ["code", "lỗi", "test", "python", "html", "app"],
+    "tool_keywords": ["tool", "công cụ", "tra cứu", "search", "web", "pubchem", "tài liệu", "docx", "word", "pdf", "sáng chế"],
     "escalate_keywords": ["tiếp tục sửa lỗi", "vẫn lỗi"],
 }
 
@@ -61,6 +62,8 @@ def classify(message: str, history: list | None = None, cfg: dict | None = None)
         return "code", "việc trước chưa đạt nên dùng model mạnh hơn"
     if any(k in text for k in cfg.get("code_keywords", [])):
         return "code", "yêu cầu liên quan đến code"
+    if any(k in text for k in cfg.get("tool_keywords", [])):
+        return "tool_calling", "yêu cầu tra cứu/công cụ (ưu tiên Llama 3.2 tool calling)"
     return "light", "việc nhẹ (hỏi đáp, tra cứu, báo cáo)"
 
 

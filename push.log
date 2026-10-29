@@ -1,0 +1,20 @@
+============================================================
+  GenericPharma-Agent - Day ma nguon len GitHub
+============================================================
+
+[2/4] Kiem tra va gom file...
+fatal: not a git repository: 'C:\Users\PC\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd'
+fatal: not a git repository: 'C:\Users\PC\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd'
+
+============================================================
+Dang ket noi repository GitHub:
+  https://github.com/trungyds16-coder/generic-pharma-agent.git
+============================================================
+
+[3/4] Ket noi remote origin...
+fatal: not a git repository: 'C:\Users\PC\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd'
+[4/4] Dang day ma nguon len GitHub (nhanh main)...
+fatal: not a git repository: 'C:\Users\PC\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd'
+
+[!] Neu GitHub yeu cau dang nhap, hay dang nhap tren trinh duyet hoac nhap Personal Access Token.
+Press any key to continue . . . 

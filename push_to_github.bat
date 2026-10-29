@@ -6,7 +6,9 @@ echo   GenericPharma-Agent - Day ma nguon len GitHub
 echo ============================================================
 echo.
 
-set "GIT=C:\Users\PC\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd\git.exe"
+set "GIT_DIR=C:\Users\PC\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd"
+set "GIT=%GIT_DIR%\git.exe"
+if exist "%GIT_DIR%" set "PATH=%GIT_DIR%;%PATH%"
 if not exist "%GIT%" (
     where git >nul 2>&1
     if not errorlevel 1 (
@@ -30,19 +32,12 @@ echo [2/4] Kiem tra va gom file...
 
 echo.
 set "DEFAULT_REPO_URL=https://github.com/trungyds16-coder/generic-pharma-agent.git"
+set "REPO_URL=%DEFAULT_REPO_URL%"
+if not "%~1"=="" set "REPO_URL=%~1"
 echo ============================================================
-echo Repository GitHub mac dinh:
-echo   %DEFAULT_REPO_URL%
-echo.
-echo Nhan [Enter] de tiep tuc, hoac dan URL khac neu can:
+echo Dang ket noi repository GitHub:
+echo   %REPO_URL%
 echo ============================================================
-set /p USER_INPUT="URL GitHub [%DEFAULT_REPO_URL%]: "
-
-if "%USER_INPUT%"=="" (
-    set "REPO_URL=%DEFAULT_REPO_URL%"
-) else (
-    set "REPO_URL=%USER_INPUT%"
-)
 
 echo.
 echo [3/4] Ket noi remote origin...

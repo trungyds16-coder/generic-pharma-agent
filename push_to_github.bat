@@ -6,9 +6,10 @@ echo   GenericPharma-Agent - Day ma nguon len GitHub
 echo ============================================================
 echo.
 
-set "GIT_DIR=C:\Users\PC\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd"
-set "GIT=%GIT_DIR%\git.exe"
-if exist "%GIT_DIR%" set "PATH=%GIT_DIR%;%PATH%"
+set "GIT_DIR="
+set "GIT_BIN_DIR=C:\Users\PC\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\git\cmd"
+set "GIT=%GIT_BIN_DIR%\git.exe"
+if exist "%GIT_BIN_DIR%" set "PATH=%GIT_BIN_DIR%;%PATH%"
 if not exist "%GIT%" (
     where git >nul 2>&1
     if not errorlevel 1 (
